@@ -215,6 +215,7 @@ function dashboardFiles(root: string, caps: { max_files: number; max_bytes: numb
  * capped at `caps.text_max_bytes` UTF-8 bytes with the cut rule above. Throws DossierError on caps it
  * cannot keep and on a dashboard or screenshots directory it refuses (see the header).
  */
+// Entry build helper, vendored unmodified.
 export function buildDossier(dir: string, caps: DossierCaps): Uint8Array {
   const max = caps.text_max_bytes;
   if (!Number.isSafeInteger(max) || max <= 0) throw new DossierError(`buildDossier: caps.text_max_bytes must be a positive integer, not ${String(max)}`);
