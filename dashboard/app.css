@@ -1,15 +1,16 @@
 /* Token Radar's plain theme. The five palette values, two radii and two families are the whole style;
    everything else is spacing, a hairline and a type step. */
 :root {
-  --canvas: #f2f5f3;
+  --canvas: #f7f5f0;          /* paper */
   --surface: #ffffff;
-  --ink: #16211c;
+  --ink: #101418;
   --muted: #5f6f67;
   --border: #d8e2dc;
-  --accent: #0f7a5a;
+  --accent: #0e6e4e;          /* forest green */
+  --mustard: #d9a441;         /* mustard yellow, badge accent */
   --negative: #b23b2e;
   --radius-control: 8px;
-  --radius-panel: 14px;
+  --radius-panel: 12px;
   --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-num: ui-monospace, "SF Mono", Menlo, monospace;
   --step-1: 4px;
@@ -48,7 +49,10 @@ a { color: var(--accent); }
 .shell { max-width: 1320px; margin: 0 auto; padding: var(--step-5) var(--step-6) var(--step-7); }
 .top {
   display: flex; align-items: flex-start; justify-content: space-between; gap: var(--step-5);
-  padding-bottom: var(--step-4); border-bottom: 1px solid var(--border);
+  padding: var(--step-4) var(--step-5);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), color-mix(in srgb, var(--accent) 2%, var(--surface)));
 }
 .brand { display: flex; align-items: center; gap: var(--step-3); }
 .mark { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); flex: none; }
@@ -92,10 +96,15 @@ tbody tr[data-selected="true"] { background: color-mix(in srgb, var(--accent) 8%
 .pos { color: var(--accent); }
 .neg { color: var(--negative); }
 .bar { width: 120px; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--border) 60%, var(--surface)); overflow: hidden; }
-.bar i { display: block; height: 100%; background: var(--accent); }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--mustard))); }
 .implied { display: flex; align-items: center; gap: var(--step-2); }
 .status { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.badge {
+  display: inline-flex; align-items: center; padding: 2px var(--step-2);
+  border-radius: var(--radius-control); font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--mustard) 22%, var(--surface)); color: var(--ink);
+}
 
 .model { margin-top: var(--step-4); padding: var(--step-5); display: grid; gap: var(--step-3); }
 .formula { font-family: var(--font-num); font-size: 13px; line-height: 1.7; color: var(--muted); overflow-wrap: anywhere; }

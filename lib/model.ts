@@ -50,6 +50,11 @@ export interface ModelConstants {
   maturity_range: number;
   maturity_days: number;
   unknown_age_days: number;
+  category_multiple_dex: number;
+  category_multiple_lending: number;
+  category_multiple_default: number;
+  age_sweet_start: number;
+  age_sweet_end: number;
 }
 
 export const MODEL: ModelConstants = {
@@ -61,10 +66,15 @@ export const MODEL: ModelConstants = {
   maturity_range: 0.4,
   maturity_days: 1095,
   unknown_age_days: 365,
+  category_multiple_dex: 0.45,
+  category_multiple_lending: 0.4,
+  category_multiple_default: 0.25,
+  age_sweet_start: 180,
+  age_sweet_end: 730,
 };
 
 /** The model's version label: the dashboard names it and the rules quote it. */
-export const MODEL_VERSION = 'radar-1';
+export const MODEL_VERSION = 'radar-2';
 
 /** How many pre-token protocols below the watchlist floor the early radar carries, by TVL. */
 export const EARLY_ROWS = 160;
@@ -179,8 +189,15 @@ export function impliedValue(protocol: SnapshotProtocol, asOf: string, model: Mo
   const growthPct = Math.min(model.growth_cap, Math.max(model.growth_floor, rawGrowth));
   const growthMult = 1 + (growthPct / 100) * model.growth_weight;
   const ageForModel = age ?? model.unknown_age_days;
-  const maturityMult = model.maturity_floor + (Math.min(Math.max(ageForModel, 0), model.maturity_days) / model.maturity_days) * model.maturity_range;
-  const base = protocol.tvl_usd * model.base_multiple;
+  const c = (protocol.category ?? '').toLowerCase();
+  const categoryMultiple = c.includes('dex') || c.includes('amm') ? model.category_multiple_dex : c.includes('lending') || c.includes('cdp') ? model.category_multiple_lending : model.category_multiple_default;
+  const base = protocol.tvl_usd * model.base_multiple * categoryMultiple;
+  // A hump curve: full weight in the sweet-spot range, ramping 0.4 -> 1.0 up to it, easing to 0.7 by maturity_days.
+  const maturityMult = ageForModel < model.age_sweet_start
+    ? 0.4 + (ageForModel / model.age_sweet_start) * 0.6
+    : ageForModel <= model.age_sweet_end
+      ? 1.0
+      : 1.0 - ((ageForModel - model.age_sweet_end) / (model.maturity_days - model.age_sweet_end)) * 0.3;
   const implied = Math.max(1, Math.round(base * growthMult * maturityMult));
   return { implied, growthPct, growthMult, maturityMult, age };
 }
@@ -275,12 +292,23 @@ function chainOf(p: SnapshotProtocol): string {
   return p.chains.length > 0 ? p.chains[0]! : 'its main chain';
 }
 
-/** How much capital one farm position needs, from the protocol's own TVL. */
+/** The chain gas adjustment: a high-gas main chain cuts the suggested capital 20%, a cheap chain raises it 20%. */
+function chainCapitalMult(p: SnapshotProtocol): number {
+  const main = chainOf(p).toLowerCase();
+  if (main === 'ethereum') return 0.8;
+  if (['solana', 'base', 'tron', 'sui', 'ton'].includes(main)) return 1.2;
+  return 1.0;
+}
+
+/** How much capital one farm position needs, from the protocol's own TVL, adjusted for its chain's gas cost. */
 function capitalFor(p: SnapshotProtocol): number {
-  if (p.tvl_usd >= 5_000_000_000) return 250;
-  if (p.tvl_usd >= 1_000_000_000) return 150;
-  if (p.tvl_usd >= 100_000_000) return 100;
-  return 50;
+  const base = (() => {
+    if (p.tvl_usd >= 5_000_000_000) return 250;
+    if (p.tvl_usd >= 1_000_000_000) return 150;
+    if (p.tvl_usd >= 100_000_000) return 100;
+    return 50;
+  })();
+  return Math.max(1, Math.round(base * chainCapitalMult(p)));
 }
 
 /** How long to hold, from the protocol's age: younger protocols get a longer qualifying window. */
@@ -306,6 +334,16 @@ function actionFor(p: SnapshotProtocol, capital: number, chain: string): string 
   if (c.includes('rwa')) return `Mint $${capital} of the protocol's yield asset on ${chain} and hold it.`;
   if (c.includes('insurance')) return `Buy $${capital} of cover from ${name} on ${chain} and keep the policy.`;
   return `Deposit $${capital} of USDC into ${name} on ${chain} and keep the position open.`;
+}
+
+/** The category's one risk warning, in the words a farmer can act on. */
+function riskFor(p: SnapshotProtocol): string {
+  const c = (p.category ?? '').toLowerCase();
+  if (c.includes('lend') || c.includes('cdp') || c.includes('collateral')) return `Lending risk: a high loan-to-value can liquidate your collateral, so keep the LTV well under the limit.`;
+  if (c.includes('dex') || c.includes('yield') || c.includes('leveraged farm')) return `LP risk: impermanent loss can leave you with less than holding the two tokens apart, so watch the ratio.`;
+  if (c.includes('bridge')) return `Bridge risk: bridges are a prime hack target, so bridge only what you need and leave no idle funds there.`;
+  if (c.includes('staking') || c.includes('restak')) return `Staking risk: slashing can cut your stake and unstaking can take days, so plan the exit window.`;
+  return `Protocol risk: smart-contract bugs and exploits can take the deposit, so never put in more than you can lose.`;
 }
 
 /**
@@ -342,6 +380,11 @@ export function farmSteps(p: SnapshotProtocol, age: number | null): FarmStep[] {
       text: `Before you withdraw, open the protocol's own points or rewards page and claim only from the link it publishes.`,
       cost: 'no fee to check, and never pay to claim',
       time: '10 minutes',
+    },
+    {
+      text: riskFor(p),
+      cost: 'no extra cost',
+      time: '2 minutes to read',
     },
     {
       text: `Write the wallet, the dates and every transaction in a farm log so you can repeat the position or unwind it.`,

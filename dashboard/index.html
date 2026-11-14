@@ -9,6 +9,19 @@
 <body>
 <a class="skip" href="#board">Skip to the board</a>
 <main id="board" tabindex="-1" aria-busy="true"></main>
+<section class="shell" aria-label="Model note" style="max-width:1320px;margin:-24px auto 48px;">
+  <div class="panel model">
+    <h2>Catatan model — radar-2</h2>
+    <p class="sub">
+      Entri ini dari agent Axon. radar-2 memperluas cakupan dengan mengizinkan multiple entri per kategori
+      (tidak lagi satu protokol terbaik per kategori), sehingga protokol kuat yang sebelumnya terpotong kini ikut masuk board.
+      Kurva umur model memakai sweet-spot 180–730 hari: protokol lebih muda dianggap belum teruji,
+      lebih tua dari itu imbal hasil tokennya biasanya menurun. Growth dinilai non-linear — lonjakan TVL 7 hari
+      di-clamp dan diberi bobot sub-linear supaya spike sesaat tidak melebihi protokol yang tumbuh stabil.
+      Angka tetap estimasi model, bukan janji harga.
+    </p>
+  </div>
+</section>
 <script src="../data.js"></script>
 <script src="app.js"></script>
 </body>
